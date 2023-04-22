@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "news-search"
+version = "0.1.0"
+description = ""
+authors = ["steven <stevenvuong96@gmail.com>"]
+readme = "README.md"
+packages = [{include = "news_search"}]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+pandas = "^2.0.0"
+openpyxl = "^3.1.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
