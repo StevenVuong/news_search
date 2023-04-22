@@ -9,6 +9,7 @@ from datetime import date
 import pinecone
 from dotenv import load_dotenv
 from fastapi import FastAPI
+import pandas as pd
 from langchain.embeddings.openai import OpenAIEmbeddings
 
 # load environment variables
@@ -21,25 +22,47 @@ pinecone.init(
 embeddings_model = OpenAIEmbeddings(model="text-embedding-ada-002")
 
 
+def load_xlsx_files(data_dir="./data/xlsx"):
+    df_list = []
+
+    for filename in os.listdir(data_dir):
+        if filename.endswith(".xlsx"):
+            file_path = os.path.join(data_dir, filename)
+            df = pd.read_excel(file_path)
+            df_list.append(df)
+
+    combined_df = pd.concat(df_list)
+    combined_df["brief"].fillna("", inplace=True)
+    combined_df["headline"].fillna("", inplace=True)
+
+    combined_df["text"] = (
+        "Headline:\n" + combined_df["headline"] + "\n" + combined_df["brief"]
+    )
+    combined_df["id"] = combined_df["id"].astype(str)
+
+    data_dict = combined_df.set_index("id")["text"].to_dict()
+
+    return data_dict
+
+
 @dataclass
 class VectorMatch:
     id: str
     ordinal: date
     score: float
+    text: str
 
-    def __init__(self, id: str, ordinal: float, score: float):
+    def __init__(self, id: str, ordinal: float, score: float, text: str):
         # parse data values
         self.id = id
         self.ordinal = date.fromordinal(int(ordinal))
         self.score = score
+        self.text = text
 
 
 app = FastAPI()
 
-
-@app.get("/")
-async def root():
-    return {"message": "Hello World"}
+DATA_DICT = load_xlsx_files(data_dir="./data/xlsx")
 
 
 @app.post("/query")
@@ -64,33 +87,20 @@ def query(query: str, date_from: date = None, date_to: date = None):
     # query pinecone index
     results = pinecone_index.query(
         query_embedding,
-        top_k=3,
+        top_k=10,
         filter=filter,
         include_metadata=True,
     )["matches"]
 
     # creates VectorMatch objects
     matches = [
-        VectorMatch(id=r["id"], ordinal=r["metadata"]["ordinal"], score=r["score"])
+        VectorMatch(
+            id=r["id"],
+            ordinal=r["metadata"]["ordinal"],
+            score=r["score"],
+            text=DATA_DICT[r["id"]] if r["id"] in DATA_DICT else None,
+        )
         for r in results
     ]
 
     return {"results": matches}
-
-
-# test
-if __name__ == "__main__":
-    # get vector embedding from text query
-    query_embedding = embeddings_model.embed_query("China")
-
-    # check if pinecone index exists
-    assert os.getenv("PINECONE_INDEX") in pinecone.list_indexes()
-    pinecone_index = pinecone.Index(os.getenv("PINECONE_INDEX"))
-
-    # query pinecone index
-    results = pinecone_index.query(
-        query_embedding,
-        top_k=10,
-        include_metadata=True,
-    )
-    print(results)

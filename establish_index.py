@@ -54,6 +54,9 @@ if __name__ == "__main__":
         # read xlsx file
         df = pd.read_excel(file_path)
 
+        # clean up data
+        df["brief"].fillna("", inplace=True)
+        df["headline"].fillna("", inplace=True)
         # create text to embed
         df["text"] = "Headline:\n" + df["headline"] + "\n" + df["brief"]
 
