@@ -3,11 +3,12 @@
 # Also include querying by metadata, namely date range.
 
 import os
+from dataclasses import dataclass
+from datetime import date
 
 import pinecone
 from dotenv import load_dotenv
 from fastapi import FastAPI
-from datetime import date
 from langchain.embeddings.openai import OpenAIEmbeddings
 
 # load environment variables
@@ -18,6 +19,20 @@ pinecone.init(
     api_key=os.getenv("PINECONE_API_KEY"), environment=os.getenv("PINECONE_ENVIRONMENT")
 )
 embeddings_model = OpenAIEmbeddings(model="text-embedding-ada-002")
+
+
+@dataclass
+class VectorMatch:
+    id: str
+    ordinal: date
+    score: float
+
+    def __init__(self, id: str, ordinal: float, score: float):
+        # parse data values
+        self.id = id
+        self.ordinal = date.fromordinal(int(ordinal))
+        self.score = score
+
 
 app = FastAPI()
 
@@ -36,6 +51,7 @@ def query(query: str, date_from: date = None, date_to: date = None):
     assert os.getenv("PINECONE_INDEX") in pinecone.list_indexes()
     pinecone_index = pinecone.Index(os.getenv("PINECONE_INDEX"))
 
+    # create filter
     filter = None
     if date_from and date_to:
         filter = {
@@ -49,12 +65,17 @@ def query(query: str, date_from: date = None, date_to: date = None):
     results = pinecone_index.query(
         query_embedding,
         top_k=3,
-        # filter=filter,
+        filter=filter,
         include_metadata=True,
-    )
-    print(results)
+    )["matches"]
 
-    return {"results": "la"}
+    # creates VectorMatch objects
+    matches = [
+        VectorMatch(id=r["id"], ordinal=r["metadata"]["ordinal"], score=r["score"])
+        for r in results
+    ]
+
+    return {"results": matches}
 
 
 # test
