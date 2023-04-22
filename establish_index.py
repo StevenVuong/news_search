@@ -1,3 +1,6 @@
+# Creates a pinecone index and populates with embedded text from.
+# xlsx files in the data/xlsx folder. Embedding is with OpenAI text-embedding-ada-002 model.
+
 import os
 from pathlib import Path
 from langchain.embeddings.openai import OpenAIEmbeddings
