@@ -2,16 +2,15 @@
 # xlsx files in the data/xlsx folder. Embedding is with OpenAI text-embedding-ada-002 model.
 
 import os
-from pathlib import Path
-from langchain.embeddings.openai import OpenAIEmbeddings
-from tqdm import tqdm
-from concurrent.futures import ThreadPoolExecutor
 import time
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 import pandas as pd
 import pinecone
 from dotenv import load_dotenv
-
+from langchain.embeddings.openai import OpenAIEmbeddings
+from tqdm import tqdm
 
 # load environment variables
 load_dotenv()
