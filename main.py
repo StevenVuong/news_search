@@ -1,20 +1,49 @@
+import os
 from pathlib import Path
+
 import pandas as pd
+import pinecone
+from dotenv import load_dotenv
+
+# load environment variables
+load_dotenv()
+
+# initialise pinecone
+pinecone.init(
+    api_key=os.getenv("PINECONE_API_KEY"), environment=os.getenv("PINECONE_ENVIRONMENT")
+)
 
 
-def xlsx_to_csv(input_dir: Path, output_dir: Path, sep: str = ','):
-    output_dir.mkdir(exist_ok=True)
-    for file_path in input_dir.glob('*.xlsx'):
+if __name__ == "__main__":
+    # check if pinecone index exists
+    if os.getenv("PINECONE_INDEX") not in pinecone.list_indexes():
+        # create pinecone index. Note: can take a few mins to create
+        pinecone.create_index(
+            os.getenv("PINECONE_INDEX"), dimension=1536, metric="cosine", pod_type="p1"
+        )
+    pinecone_index = pinecone.Index(os.getenv("PINECONE_INDEX"))
+
+    # load xlsx files
+    xlsx_dir = Path("./data/xlsx")
+
+    for file_path in xlsx_dir.glob("*.xlsx"):
+        # read xlsx file
         df = pd.read_excel(file_path)
-        csv_file_path = output_dir / file_path.with_suffix('.csv').name
-        df.to_csv(csv_file_path, index=False, sep=sep)
 
-if __name__=='__main__':
+        # create text to embed
+        df["text"] = "Headline:\n" + df["headline"] + "\n" + df["brief"]
 
-    # # convert xlsx to csv file
-    xlsx_dir = Path('./data/xlsx')
-    csv_dir = Path('./data/csv')
-    # xlsx_to_csv(xlsx_dir, csv_dir, sep='||')
+        # go from datetime to date; and get ordinal time
+        df["date"] = pd.to_datetime(df["updateTime"]).dt.date
+        df["ordinal"] = df["date"].apply(lambda x: x.toordinal())
+
+        # drop unwanted columns
+        df.drop(["headline", "brief", "updateTime", "date"], axis=1, inplace=True)
+
+        print(df.head())
+
+        break
+
+    # convert xlsx to csv file
 
     # read csv files from csv_dir
-    

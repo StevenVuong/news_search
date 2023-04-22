@@ -1,4 +1,4 @@
-# data files
+.env
 data/
 
 # Byte-compiled / optimized / DLL files

@@ -24,7 +24,6 @@ run_app:
 format:
 	@echo "Formatting..."
 	black ./
-	flake8 ./
 	isort ./
 	interrogate -vv ./
 
