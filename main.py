@@ -3,11 +3,11 @@ from pathlib import Path
 from langchain.embeddings.openai import OpenAIEmbeddings
 from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor
+import time
 
 import pandas as pd
 import pinecone
 from dotenv import load_dotenv
-import asyncio
 
 
 # load environment variables
@@ -24,6 +24,11 @@ def embed_text(text):
     return embeddings_model.embed_query(text)
 
 
+def embed_text_with_delay(text):
+    time.sleep(0.9)  # add a 0.9 second delay
+    return embed_text(text)
+
+
 if __name__ == "__main__":
     # check if pinecone index exists
     if os.getenv("PINECONE_INDEX") not in pinecone.list_indexes():
@@ -37,6 +42,8 @@ if __name__ == "__main__":
     xlsx_dir = Path("./data/xlsx")
 
     for file_path in xlsx_dir.glob("*.xlsx"):
+        print(f"Processing {file_path}...")
+
         # read xlsx file
         df = pd.read_excel(file_path)
 
@@ -51,29 +58,35 @@ if __name__ == "__main__":
         df.drop(["headline", "brief", "updateTime", "date"], axis=1, inplace=True)
 
         # just do head for now; delete this line later
-        df = df.head(2)
         print("-" * 80)
-        print(df.head()))
+        print(f"Embedding {len(df)} texts...")
 
-        # loop through and embed queries; no support for documents at the moment
-        with ThreadPoolExecutor() as executor:
-            embedded_texts = list(executor.map(embed_text, df["text"].values))
+        batch_size = 1000
+        # batch upsert
+        for i in range(0, len(df), batch_size):
+            print(f"Batch {i} to {i + batch_size}...")
+            df_batch = df.iloc[i : i + batch_size]
 
-        # create pinecone list to insert into index of [("id", [vector], {"ordinal":})]
-        pinecone_upsert_list = list(
-            zip(
-                df["id"].tolist(),
-                embedded_texts,
-                [{"ordinal": x} for x in df["ordinal"].tolist()],
+            # loop through and embed queries; no support for documents at the moment
+            with ThreadPoolExecutor(max_workers=5) as executor:
+                embedded_texts = list(
+                    tqdm(executor.map(embed_text_with_delay, df_batch["text"].values))
+                )
+
+            # create pinecone list to insert into index of [("id", [vector], {"ordinal":})]
+            pinecone_upsert_list = list(
+                zip(
+                    df_batch["id"].tolist(),
+                    embedded_texts,
+                    [{"ordinal": x} for x in df_batch["ordinal"].tolist()],
+                )
             )
-        )
 
-        # upsert pinecone index
-        pinecone_index.upsert(pinecone_upsert_list)
+            # upsert pinecone index
+            pinecone_index.upsert(pinecone_upsert_list)
 
-        # Get index statistics
-        stats = pinecone_index.describe_index_stats()
-        print("-" * 80)
-        print("Index statistics:")
-        print(stats)
-        break
+            # Get index statistics
+            stats = pinecone_index.describe_index_stats()
+            print("-" * 80)
+            print("Index statistics:")
+            print(stats)
