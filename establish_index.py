@@ -19,11 +19,15 @@ load_dotenv()
 pinecone.init(
     api_key=os.getenv("PINECONE_API_KEY"), environment=os.getenv("PINECONE_ENVIRONMENT")
 )
-embeddings_model = OpenAIEmbeddings(model="text-embedding-ada-002")
+# feed model one line at a time; very slow but helps us resolve a particular bug..
+embeddings_model = OpenAIEmbeddings(model="text-embedding-ada-002", chunk_size=1)
 
 
 def embed_text(text):
-    return embeddings_model.embed_query(text)
+    try:
+        return embeddings_model.embed_query(text)
+    except:
+        raise LookupError(f"Error embedding text: {text}")
 
 
 def embed_text_with_delay(text):
@@ -43,6 +47,7 @@ if __name__ == "__main__":
     # load xlsx files
     xlsx_dir = Path("./data/xlsx")
 
+    # loop through xlsx files
     for file_path in xlsx_dir.glob("*.xlsx"):
         print(f"Processing {file_path}...")
 
