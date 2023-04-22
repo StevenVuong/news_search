@@ -57,11 +57,17 @@ if __name__ == "__main__":
         # drop unwanted columns
         df.drop(["headline", "brief", "updateTime", "date"], axis=1, inplace=True)
 
+        # set asset type for remaining columns
+        df["text"] = df["text"].astype(str)
+        df["ordinal"] = df["ordinal"].astype(int)
+        df["id"] = df["id"].astype(str)
+
         # just do head for now; delete this line later
         print("-" * 80)
         print(f"Embedding {len(df)} texts...")
 
-        batch_size = 1000
+        # pinecone has upsert limit of 2MB and cannot be >1000 vectors.
+        batch_size = 100
         # batch upsert
         for i in range(0, len(df), batch_size):
             print(f"Batch {i} to {i + batch_size}...")
