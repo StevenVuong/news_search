@@ -4,6 +4,7 @@ To start app:
 
 ```bash
 poetry run streamlit run app.py
+poetry run uvicorn fastapi_app:app --reload
 ```
 
 ## Add Data to Vector Database
