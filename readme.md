@@ -6,6 +6,12 @@ To start app:
 poetry run streamlit run app.py
 ```
 
+## Add Data to Vector Database
+
+```sh
+poetry run python -m establish_index.py
+```
+
 ## Deploy to Azure Web Services
 
 Create a `requirements.txt` file:
