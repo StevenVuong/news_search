@@ -9,6 +9,7 @@ from datetime import date
 import pinecone
 from dotenv import load_dotenv
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 from langchain.embeddings.openai import OpenAIEmbeddings
 
@@ -61,6 +62,22 @@ class VectorMatch:
 
 
 app = FastAPI()
+
+# Define a list of allowed origins
+# You should replace this with the origin(s) of your Vue application
+origins = [
+    "http://localhost",
+    "http://localhost:8080",
+]
+
+# Add the CORS middleware to your FastAPI application
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 DATA_DICT = load_xlsx_files(data_dir="./data/xlsx")
 
