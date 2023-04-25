@@ -114,6 +114,8 @@ def main():
             )
             for r in results
         ]
+        # Lower score means closer match; so we can sort by score
+        matches.sort(key=lambda x: x.score)
 
         st.write("---")
         st.write(f"Top {num_items_query} results:")
